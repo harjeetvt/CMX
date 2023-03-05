@@ -86,11 +86,8 @@ FermiCG.add_cmf_operators!(cluster_ops, cluster_bases, ints, d1.a, d1.b);
 
 ref_fock = FermiCG.FockConfig(init_fspace)
 
-#cmfstate = FermiCG.TPSCIstate(clusters, ref_fock)
-
-
-cmfstate = FermiCG.TPSCIstate(clusters)
-cmfstate = FermiCG.eye!(cmfstate)
+cmfstate = FermiCG.TPSCIstate(clusters, ref_fock)
+FermiCG.eye!(cmfstate)
 
 
 sig = FermiCG.open_matvec_thread(cmfstate, cluster_ops, clustered_ham, nbody=1, thresh=1e-9, prescreen=true)
@@ -105,18 +102,43 @@ println("Size of Sigma = ")
 display(size(sig))
 display(sig)
 
+
+
 # <H> = (<0|H)|0> = <sig|0>
 H1 = dot(sig, cmfstate)
 
 # <HH> = (<0|H)(H|0>) = <sig|sig>
 H2 = dot(sig, sig)
 
-println("<H> = ",H1)
+# <HHH> = <sig|H|sig>
+sig_1 = FermiCG.open_matvec_thread(sig, cluster_ops, clustered_ham, nbody=1, thresh=1e-9, prescreen=true)
+H3 = dot(sig_1, sig)
 
-println("<HH>",H2)
+# <HHHH> = <sig_1|sig_1>
+H4 = dot(sig_1, sig_1)
 
-ovlp = dot(cmfstate, cmfstate)
-println("<0|0> = ",ovlp)
+# <HHHHH> = <sig_1|H|sig_1>
+sig_2 = FermiCG.open_matvec_thread(sig_1, cluster_ops, clustered_ham, nbody=1, thresh=1e-9, prescreen=true)
+H5 = dot(sig_2,sig_1)
+
+# For k = 1
+# E_cio(1) = I_1 = <H>
+I_1 = H1
+E_cio_1 = I_1
+println("E_cio(1) = ",E_cio_1)
+
+# For k = 2
+# E_cio(2) = I_1 - I_2^2/I_3
+I_2 = H2 - H1^2
+I_3 = H3 - 3*H2*H1 + 2*H1^3
+E_cio_2 = I_1 - I_2^2/I_3
+println("E_cio(2) = ",E_cio_2)
+
+# For k = 3
+I_4 = H4 - 4*H3*H1 - 3*H2^2 + 12*H2*H1^2 - 6*H1^4
+I_5 = H5 - 5*H4*H1 - 10*H3*H2 + 20*H3*H1^2 + 30*H2^2*H1 - 60*H2*H1^3 + 24*H1^5
+E_cio_3 = I_1 - I_2^2/I_3 - 1/I_3*(I_2*I_4-I_3^2)^2/(I_5*I_3-I_4^2)
+println("E_cio(3) = ",E_cio_3)
 
 
 println("Hello World")
